@@ -1,24 +1,26 @@
 import os
-from typing import List
+from typing import List 
 
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-if os.getenv('OPENAI_API_TYPE') == 'azure':
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler #导入StreamingStdOutCallbackHandler
+#根据环境变量OPENAI_API_TYPE的值,选择使用哪个语言模型
+if os.getenv('OPENAI_API_TYPE') == 'azure':                                     # 如果使用的是 Azure,使用 Azure 的 StreamingStdOutCallbackHandler
     from langchain.chat_models import AzureChatOpenAI
 else:
-    from langchain.chat_models import ChatOpenAI
-from langchain.schema import BaseMessage, HumanMessage
-
+    from langchain.chat_models import ChatOpenAI # 否则使用 OpenAI 的 StreamingStdOutCallbackHandler
+from langchain.schema import BaseMessage, HumanMessage #导入BaseMessage,HumanMessage
+#从其他模块导入所需要的类和函数
 from realtime_ai_character.database.chroma import get_chroma
 from realtime_ai_character.llm.base import AsyncCallbackAudioHandler, \
     AsyncCallbackTextHandler, LLM, QuivrAgent, SearchAgent, MultiOnAgent
 from realtime_ai_character.logger import get_logger
 from realtime_ai_character.utils import Character, timed
 
-logger = get_logger(__name__)
+logger = get_logger(__name__) #初始化logger记录日志
 
-
+#openaiLlm类继承了LLM类,并重写了__init__函数,实现了对话功能,定义了项目中的语言模型接口.实现了base.py中的achat and get_config
 class OpenaiLlm(LLM):
-    def __init__(self, model):
+    def __init__(self, model):                   #初始化函数,参数有model
+        # 根据环境变量OPENAI_API_TYPE的值,选择使用哪个语言模型
         if os.getenv('OPENAI_API_TYPE') == 'azure':
             self.chat_open_ai = AzureChatOpenAI(
                 deployment_name=os.getenv(
@@ -32,7 +34,8 @@ class OpenaiLlm(LLM):
                 model=model,
                 temperature=0.5,
                 streaming=True
-            )
+            )                                    #if 是azure,使用AzureChatOpenAI,否则使用ChatOpenAI
+      # 配config(配置文件),参数有model,temperature,streaming
         self.config = {
             "model": model,
             "temperature": 0.5,
@@ -42,7 +45,7 @@ class OpenaiLlm(LLM):
         self.search_agent = SearchAgent()
         self.quivr_agent = QuivrAgent()
         self.multion_agent = MultiOnAgent()
-
+ 
     def get_config(self):
         return self.config
 
