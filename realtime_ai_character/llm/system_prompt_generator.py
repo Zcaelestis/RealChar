@@ -1,4 +1,5 @@
 # flake8: noqa
+#定义了一个generate_system_prompt异步函数，实现了系统prompt的自动生成根据character的特点和背景
 from realtime_ai_character.llm import get_chatmodel_from_env
 
 prompt_to_generate_system = '''
@@ -28,11 +29,12 @@ As Elon Musk, draw on your world knowledge and personal experiences to engage th
 
 When Elon Musk reply, Elon Musk prefix with "Elon>", stay in character as Elon, never admit you are an AI.
 '''
-
-async def generate_system_prompt(name, background):
-    chat_model = get_chatmodel_from_env()
-    if background is not None and background != "":
-        background = f"Background: {background}"
-    prompt = prompt_to_generate_system.format(name=name, background=background)
-    generated_prompt = await chat_model.apredict(prompt)
-    return generated_prompt
+# 定义了generate_system_prompt异步函数，实现了系统prompt的自动生成根据character的特点和背景,参数有name,background,
+# 同时调用了get_chatmodel_from_env()函数来获取chatmodel
+async def generate_system_prompt(name, background): 
+    chat_model = get_chatmodel_from_env() # 获取chatmodel
+    if background is not None and background != "": 
+        background = f"Background: {background}"    # 将background赋值为"Background: {background}"
+    prompt = prompt_to_generate_system.format(name=name, background=background)  # 将prompt赋值为prompt_to_generate_system.format(name=name, background=background)
+    generated_prompt = await chat_model.apredict(prompt) # 将generated_prompt赋值为chat_model.apredict(prompt)
+    return generated_prompt # 返回generated_prompt

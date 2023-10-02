@@ -1,17 +1,14 @@
-# Importing necessary modules
-import datetime
-from sqlalchemy import Column, String, DateTime, Unicode
-from sqlalchemy.inspection import inspect
+import datetime #导入datetime模块
+
+from sqlalchemy import Column, String, DateTime, Unicode 
 from pydantic import BaseModel
 from realtime_ai_character.database.base import Base
 from typing import Optional
 
-# Defining a Feedback class that inherits from the Base class
-class Feedback(Base):
-    # Defining the name of the table in the database
-    __tablename__ = "feedbacks"
-
-    # Defining the columns of the table
+# 定义了一个 Feedback 类，用于存储用户反馈的信息
+class Feedback(Base): 
+    __tablename__ = "feedbacks" #定义了table name是feedbacks
+#list of columns of the table contains: message_id...
     message_id = Column(String(64), primary_key=True)
     session_id = Column(String(50), nullable=True)
     user_id = Column(String(50), nullable=True)
@@ -19,27 +16,22 @@ class Feedback(Base):
     feedback = Column(String(100), nullable=True)
     comment = Column(Unicode(65535), nullable=True)
     created_at = Column(DateTime(), nullable=False)
-
-    # Defining a method to convert the Feedback object to a dictionary
+#定义了一个to_dict方法,将用户反馈信息转换为字典
     def to_dict(self):
         return {
             c.key:
-            # If the value is a datetime object, convert it to an ISO formatted string
-            getattr(self, c.key).isoformat() if isinstance(
+            getattr(self, c.key).isoformat() if isinstance(  
                 getattr(self, c.key), datetime.datetime) else getattr(
                     self, c.key)
-            # Iterate over all the columns of the table
             for c in inspect(self).mapper.column_attrs
-        }
-
-    # Defining a method to save the Feedback object to the database
+        } #如果value是datetime.datetime类型,则将其转换为isoformat,iterate over all columns and return a dict
+#定义了save方法,将用户反馈信息保存到数据库中
     def save(self, db):
-        db.add(self)
-        db.commit()
+        db.add(self) #add the object to the session
+        db.commit()  #commit the session
 
-# Defining a FeedbackRequest class that inherits from the BaseModel class
+# 定义了一个 FeedbackRequest 类，用于接收用户反馈的请求
 class FeedbackRequest(BaseModel):
-    # Defining the attributes of the FeedbackRequest object
     message_id: str
     session_id: Optional[str] = None
     server_message_unicode: Optional[str] = None

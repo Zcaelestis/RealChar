@@ -1,3 +1,4 @@
+# this file defines the routes for the API,定义了一组api端点路由用于处理不同的请求
 import os
 import datetime
 import uuid
@@ -23,25 +24,33 @@ from requests import Session
 from sqlalchemy import func
 
 
-router = APIRouter()
+router = APIRouter() # 创建一个APIRouter对象,定义路由和端点
 
+# 判断环境变量USE_AUTH是否为真，若为真则从环境变量中获取FIREBASE_CONFIG_PATH的值，并使用该值初始化firebase_admin
 if os.getenv('USE_AUTH', ''):
     cred = credentials.Certificate(os.environ.get('FIREBASE_CONFIG_PATH'))
     firebase_admin.initialize_app(cred)
 
-MAX_FILE_UPLOADS = 5
+MAX_FILE_UPLOADS = 5 # 设置最大文件上传数量为5
 
 
+# async 声明函数get_current_user
+# 判断环境变量USE_AUTH是否为真
+# 如果是，则提取Authorization header中的token
+# 如果不是，则返回空字符串
+# 通过firebase_admin的auth.verify_id_token()方法验证token
+# 异步函数，用于获取当前用户
 async def get_current_user(request: Request):
     """Heler function for auth with Firebase."""
-    if os.getenv('USE_AUTH', ''):
-        # Extracts the token from the Authorization header
-        if 'Authorization' not in request.headers:
+    if os.getenv('USE_AUTH', ''):                            # 判断环境变量USE_AUTH是否为真
+        # Extracts the token from the Authorization header 
+        if 'Authorization' not in request.headers:           # if 是，则提取Authorization header中的token
             # Anonymous users.
-            return ""
-        tokens = request.headers.get('Authorization').split("Bearer ")
-        if not tokens or len(tokens) < 2:
-            raise HTTPException(
+            return ""                                        # 如果不是，则返回空字符串             
+        tokens = request.headers.get('Authorization').split("Bearer ") 
+        if not tokens or len(tokens) < 2:                               # 如果token不存在或长度小于2
+            
+            raise HTTPException(                                           
                 status_code=http_status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid authentication credentials',
                 headers={'WWW-Authenticate': 'Bearer'},
@@ -49,26 +58,26 @@ async def get_current_user(request: Request):
         token = tokens[1]
         try:
             # Verify the token against the Firebase Auth API.
-            decoded_token = auth.verify_id_token(token)
-        except FirebaseError:
-            raise HTTPException(
+            decoded_token = auth.verify_id_token(token)   # 通过firebase_admin的auth.verify_id_token()方法验证token
+        except FirebaseError: 
+            raise HTTPException( 
                 status_code=http_status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid authentication credentials',
-                headers={'WWW-Authenticate': 'Bearer'},
-            )
-
+                headers={'WWW-Authenticate': 'Bearer'}, 
+            ) 
         return decoded_token
     else:
         return ""
 
-
-@router.get("/status")
+#定义了一系列的路由端点,包括status, characters, configs, session_history, feedback, uploadfile, 
+# create_character, edit_character, delete_character, generate_audio, quivr_info, quivr_info_update, clone_voice,使用depends来获取当前用户,如果用户不存在,则返回401错误
+@router.get("/status") # 定义路由端点status
 async def status():
     return {"status": "ok", "message": "RealChar is running smoothly!"}
 
 
-@router.get("/characters")
-async def characters(user=Depends(get_current_user)):
+@router.get("/characters") # 定义路由端点characters
+async def characters(user=Depends(get_current_user)): #使用depends来获取当前用户,如果用户不存在,则返回401错误
     def get_image_url(character):
         gcs_path = 'https://storage.googleapis.com/assistly'
         if character.data and 'avatar_filename' in character.data:
@@ -89,17 +98,17 @@ async def characters(user=Depends(get_current_user)):
         "tts": character.tts,
         'is_author': character.author_id == uid,
     } for character in catalog.characters.values()
-            if character.author_id == uid or character.visibility == 'public']
+            if character.author_id == uid or character.visibility == 'public'] # 返回一个字典,包含character_id,name...r键,值为一个列表,列表中包含字典
 
 
-@router.get("/configs")
+@router.get("/configs") # 定义路由端点configs
 async def configs():
     return {
         'llms': ['gpt-4', 'gpt-3.5-turbo-16k', 'claude-2', 'meta-llama/Llama-2-70b-chat-hf'],
-    }
+    } # 返回一个字典,包含llms键,值为一个列表,列表中包含四个字符串
 
-@router.get("/session_history")
-async def get_session_history(session_id: str, db: Session = Depends(get_db)):
+@router.get("/session_history") # 定义路由端点session_history
+async def get_session_history(session_id: str, db: Session = Depends(get_db)): #使用depends来获取当前用户,如果用户不存在,则返回401错误
     # Read session history from the database.
     interactions = await asyncio.to_thread(
         db.query(Interaction).filter(Interaction.session_id == session_id).all)
@@ -107,7 +116,7 @@ async def get_session_history(session_id: str, db: Session = Depends(get_db)):
     interactions_json = [interaction.to_dict() for interaction in interactions]
     return interactions_json
 
-@router.post("/feedback")
+@router.post("/feedback") # 定义路由端点feedback
 async def post_feedback(feedback_request: FeedbackRequest,
                         user = Depends(get_current_user),
                         db: Session = Depends(get_db)):
@@ -116,21 +125,21 @@ async def post_feedback(feedback_request: FeedbackRequest,
                 status_code=http_status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid authentication credentials',
                 headers={'WWW-Authenticate': 'Bearer'},
-            )
+            ) # 如果用户不存在,则返回401错误
     feedback = Feedback(**feedback_request.dict())
     feedback.user_id = user['uid']
     feedback.created_at = datetime.datetime.now()
-    await asyncio.to_thread(feedback.save, db)
+    await asyncio.to_thread(feedback.save, db) # save feedback to database
 
 
-@router.post("/uploadfile")
+@router.post("/uploadfile") # 定义路由端点uploadfile
 async def upload_file(file: UploadFile = File(...), user = Depends(get_current_user)):
     if not user:
         raise HTTPException(
                 status_code=http_status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid authentication credentials',
                 headers={'WWW-Authenticate': 'Bearer'},
-            )
+            ) # 如果用户不存在,则返回401错误
 
     storage_client = storage.Client()
     bucket_name = os.environ.get('GCP_STORAGE_BUCKET_NAME')
@@ -138,9 +147,9 @@ async def upload_file(file: UploadFile = File(...), user = Depends(get_current_u
         raise HTTPException(
                 status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail='GCP_STORAGE_BUCKET_NAME is not set',
-            )
+            ) # 如果bucket_name不存在,则返回500错误
 
-    bucket = storage_client.bucket(bucket_name)
+    bucket = storage_client.bucket(bucket_name) # 创建bucket对象
 
     # Create a new filename with a timestamp and a random uuid to avoid duplicate filenames
     file_extension = os.path.splitext(file.filename)[1]
@@ -148,7 +157,7 @@ async def upload_file(file: UploadFile = File(...), user = Depends(get_current_u
         f"user_upload/{user['uid']}/"
         f"{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}-"
         f"{uuid.uuid4()}{file_extension}"
-    )
+    ) # 创建新的文件名
 
     blob = bucket.blob(new_filename)
 
@@ -159,9 +168,9 @@ async def upload_file(file: UploadFile = File(...), user = Depends(get_current_u
     return {
         "filename": new_filename,
         "content-type": file.content_type
-    }
+    } # 返回一个字典,包含filename,content-type键,值为字符串
 
-@router.post("/create_character")
+@router.post("/create_character") # 定义路由端点create_character
 async def create_character(character_request: CharacterRequest,
                            user = Depends(get_current_user),
                            db: Session = Depends(get_db)):
@@ -170,17 +179,17 @@ async def create_character(character_request: CharacterRequest,
                 status_code=http_status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid authentication credentials',
                 headers={'WWW-Authenticate': 'Bearer'},
-            )
+            )  # 如果用户不存在,则返回401错误
     character = Character(**character_request.dict())
     character.id = str(uuid.uuid4().hex)
     character.author_id = user['uid']
     now_time = datetime.datetime.now()
     character.created_at = now_time
     character.updated_at = now_time
-    await asyncio.to_thread(character.save, db)
+    await asyncio.to_thread(character.save, db) # save character to database
 
 
-@router.post("/edit_character")
+@router.post("/edit_character") # 定义路由端点edit_character
 async def edit_character(edit_character_request: EditCharacterRequest,
                          user = Depends(get_current_user),
                          db: Session = Depends(get_db)):
@@ -209,7 +218,7 @@ async def edit_character(edit_character_request: EditCharacterRequest,
     character = Character(**edit_character_request.dict())
     character.updated_at = datetime.datetime.now()
     db.merge(character)
-    db.commit()
+    db.commit() #
 
 
 @router.post("/delete_character")

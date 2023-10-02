@@ -3,7 +3,7 @@ from sqlalchemy.inspection import inspect
 import datetime
 from realtime_ai_character.database.base import Base
 
-
+# 定义了一个 Interaction 类，用于存储用户与角色的交互信息
 class Interaction(Base):
     __tablename__ = "interactions"
 
@@ -26,7 +26,7 @@ class Interaction(Base):
     language = Column(String(10))
     message_id = Column(String(64))
     llm_config = Column(JSON())
-
+#定义了一个to_dict方法,将用户与角色的交互信息转换为字典
     def to_dict(self):
         return {
             c.key:
@@ -35,7 +35,7 @@ class Interaction(Base):
                     self, c.key)
             for c in inspect(self).mapper.column_attrs
         }
-
+#定义了save方法,将用户与角色的交互信息保存到数据库中
     def save(self, db):
         db.add(self)
         db.commit()
