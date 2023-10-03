@@ -86,7 +86,7 @@ class CatalogManager(Singleton):
 
         character_id = yaml_content['character_id']     # get the character id
         character_name = yaml_content['character_name'] # get the character name
-        voice_id = yaml_content['voice_id']             # get the voice id
+        voice_id = str(yaml_content['voice_id'])             # get the voice id
         if (os.getenv(character_id.upper() + "_VOICE_ID", "")):  # if the voice id is not empty
             voice_id = os.getenv(character_id.upper() + "_VOICE_ID") # get the voice id from the environment variable
         self.characters[character_id] = Character(
