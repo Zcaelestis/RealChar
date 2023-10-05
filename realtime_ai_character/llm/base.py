@@ -1,45 +1,49 @@
 import os
-from abc import ABC, abstractmethod
-import requests
+from abc import ABC, abstractmethod #导入 abc 模块中的Abstract Base Class module,抽象基类模块
+import requests 
 import multion
 import asyncio
 
-from langchain.callbacks.base import AsyncCallbackHandler
+
+from langchain.callbacks.base import AsyncCallbackHandler 
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from langchain.utilities import GoogleSerperAPIWrapper, SerpAPIWrapper, GoogleSearchAPIWrapper
+from langchain.utilities import GoogleSerperAPIWrapper, SerpAPIWrapper, GoogleSearchAPIWrapper #导入与google搜索相关的apiwrapper
 
 from realtime_ai_character.logger import get_logger
 from realtime_ai_character.utils import get_timer, timed
 
-logger = get_logger(__name__)
+logger = get_logger(__name__) # 记录日志
 
-timer = get_timer()
+timer = get_timer()           # 记录时间
+# 定义了语言模型的接口,项目中使用的任何语言模型都必须使用该语言模型方法。
+StreamingStdOutCallbackHandler.on_chat_model_start = lambda *args, **kwargs: None 
 
-StreamingStdOutCallbackHandler.on_chat_model_start = lambda *args, **kwargs: None
-
-
+# class AsyncCallbackTextHandler处理基于文本语言模型的回调函数,继承了StreamingStdOutCallbackHandler
 class AsyncCallbackTextHandler(AsyncCallbackHandler):
-    def __init__(self, on_new_token=None, token_buffer=None, on_llm_end=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.on_new_token = on_new_token
-        self._on_llm_end = on_llm_end
-        self.token_buffer = token_buffer
+   
+ def __init__(self, on_new_token=None, token_buffer=None, on_llm_end=None, *args, **kwargs): 
+        super().__init__(*args, **kwargs)   #调用父类的初始化函数
+        self.on_new_token = on_new_token    #设置了on_new_token
+        self._on_llm_end = on_llm_end       #设置了_on_llm_end 
+        self.token_buffer = token_buffer    #设置了token_buffer
 
+    # 定义了on_chat_model_start 异步函数,参数有*args, **kwargs. 
     async def on_chat_model_start(self, *args, **kwargs):
-        pass
+        pass #抽象类用来继承,不用来实例化,所以这里pass
 
-    async def on_llm_new_token(self, token: str, *args, **kwargs):
-        if self.token_buffer is not None:
-            self.token_buffer.append(token)
-        await self.on_new_token(token)
+    async def on_llm_new_token(self, token: str, *args, **kwargs): #定义了on_llm_new_token 异步函数,接收新token
+        if self.token_buffer is not None:   #如果token_buffer不为空
+            self.token_buffer.append(token) #将token添加到token_buffer中
+        await self.on_new_token(token)      #调用on_new_token函数
 
-    async def on_llm_end(self, *args, **kwargs):
-        if self._on_llm_end is not None:
-            await self._on_llm_end(''.join(self.token_buffer))
-            self.token_buffer.clear()
+    async def on_llm_end(self, *args, **kwargs):               #定义了on_llm_end 异步函数,结束
+        if self._on_llm_end is not None:                       #如果_on_llm_end不为空
+            await self._on_llm_end(''.join(self.token_buffer)) #将token_buffer中的token连接起来
+            self.token_buffer.clear()                           #清空token_buffer
 
-
-class AsyncCallbackAudioHandler(AsyncCallbackHandler):
+# Class AsyncCallbackAudioHandler处理基于音频语言模型的回调函数,继承了AsyncCallbackHandler
+class AsyncCallbackAudioHandler(AsyncCallbackHandler): 
+    
     def __init__(self, text_to_speech=None, websocket=None, tts_event=None, voice_id="",
                  language="en-US", *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -92,7 +96,7 @@ class AsyncCallbackAudioHandler(AsyncCallbackHandler):
                 self.voice_id,
                 self.is_first_sentence,
                 self.language)
-
+# SearchAgent类,用于搜索,根据环境变量中的APIKEY选择搜索方式
 class SearchAgent:
 
     def __init__(self):
@@ -123,7 +127,7 @@ class SearchAgent:
             except Exception as e:
                 logger.error(f'Error when searching: {e}')
         return ''
-
+# QuivrAgent类,用于查询quivrAPI,可以接受query,apiKey,brainId三个参数,返回查询结果
 class QuivrAgent:
 
     def __init__(self):
@@ -154,7 +158,7 @@ class QuivrAgent:
         except Exception as e:
             logger.error(f'Error when querying quivr: {e}')
         return ''
-
+#MulitOnAgent类,用于查询MultionAPI,可以接受query一个参数,返回查询结果
 class MultiOnAgent:
     def __init__(self):
         self.init = False
@@ -174,7 +178,7 @@ class MultiOnAgent:
             logger.error(f'Error when querying multion: {e}')
             return ("The query was attempted by a MutliOn agent, but failed. Inform user about "
                     "this failure.")
-
+#LLM类,用于语言模型,继承了ABC类,抽象基类,定义了接口以及方法:achat, get_config,其中achat方法用于对用户的相应,而get_config方法用于检索和获取语言模型配置
 class LLM(ABC):
     @abstractmethod
     @timed

@@ -1,23 +1,24 @@
 #!/usr/bin/env python
 """A CLI for building an running RealChar project locally."""
-import click
-import os
-import subprocess
-import sys
+import click # pip install click 命令行接口
+import os    # 操作系统交互
+import subprocess #子进程管理 
+import sys          #系统参数变量
 
 
-@click.group()
-def cli():
+@click.group() # 命令组
+#定义了用于构建和运行的几个命令: docker_build, docker_run, docker_delete, run_uvicorn, web_build, docker_next_web_build
+
+def cli(): 
     assert sys.version_info > (3, 10), "Python version must be newer than 3.10"
     pass
 
-
-@click.command()
+@click.command() #定义docker build 命令
 @click.option('--name', default="realtime-ai-character",
               help='The name to give to your Docker image.')
 @click.option('--rebuild', is_flag=True,
               help='Flag to indicate whether to rebuild the Docker image.')
-def docker_build(name, rebuild):
+def docker_build(name, rebuild): #构建 RealChar 项目的 Docker 镜像
     if rebuild or not image_exists(name):
         click.secho(f"Building Docker image: {name}...", fg='green')
         if (image_exists(name)):
@@ -34,7 +35,7 @@ def docker_build(name, rebuild):
               help='The name of the Docker image to run.')
 @click.option('--db-file', default=None,
               help='Path to the database file to mount inside the container.')
-def docker_run(name, db_file):
+def docker_run(name, db_file): #运行 RealChar 项目的 Docker 镜像
     click.secho(f"Running Docker image: {name}...", fg='green')
     if not os.path.isfile('.env'):
         click.secho(
@@ -53,7 +54,7 @@ def docker_run(name, db_file):
 @click.command()
 @click.option('--name', default="realtime-ai-character",
               help='The name of the Docker image to delete.')
-def docker_delete(name):
+def docker_delete(name): #删除 RealChar 项目的 Docker 镜像
     if image_exists(name):
         click.secho(f"Deleting Docker image: {name}...", fg='green')
         subprocess.run(["docker", "rmi", "-f", name])
@@ -63,7 +64,7 @@ def docker_delete(name):
 
 @click.command(context_settings={"ignore_unknown_options": True})
 @click.argument('args', nargs=-1, type=click.UNPROCESSED)
-def run_uvicorn(args):
+def run_uvicorn(args): #运行 RealChar 项目的 FastAPI 服务器
     click.secho("Running uvicorn server...", fg='green')
     subprocess.run(["uvicorn", "realtime_ai_character.main:app",
                    "--ws-ping-interval", "60",
@@ -72,7 +73,7 @@ def run_uvicorn(args):
 
 
 @click.command()
-def web_build():
+def web_build(): #构建 RealChar 项目的 Web 应用
     # Build the web app to be served by FastAPI
     click.secho("Building web app...", fg='green')
     subprocess.run(["npm", "install"], cwd="client/web")
@@ -84,7 +85,7 @@ def web_build():
 @click.command()
 @click.option('--file', '-f', default='client/next-web/.env', help='Path to the .env file.')
 @click.option('--image-name', '-i', default='realchar-next-web', help='Name of the Docker image.')
-def docker_next_web_build(file, image_name):
+def docker_next_web_build(file, image_name): 
     """Build docker image using client/next-web/.env file for build arguments."""
     build_args = ""
 
@@ -109,7 +110,7 @@ def docker_next_web_build(file, image_name):
         click.secho("Failed to build Docker image.", fg='red')
 
 
-def image_exists(name):
+def image_exists(name): #检查 Docker 镜像是否存在
     result = subprocess.run(
         ["docker", "image", "inspect", name], capture_output=True, text=True)
     return result.returncode == 0
