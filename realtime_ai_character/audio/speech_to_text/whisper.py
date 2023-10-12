@@ -67,7 +67,7 @@ class Whisper(Singleton, SpeechToText):
     # 定义transcribe方法，将语音转为文本,参数有 audio_bytes转录的语音数据的字节, platform默认的平台是web, prompt提示,默认空, 
     # language默认的语言是en-US suppress_tokens: a list of tokens to suppress from the transcription;
    
- def transcribe(self, audio_bytes, platform, prompt="", language="en-US", suppress_tokens=[-1]):
+    def transcribe(self, audio_bytes, platform, prompt="", language="en-US", suppress_tokens=[-1]):
         logger.info("Transcribing audio...") # 记录日志
         if platform == "web": # web平台
             audio = self._convert_webm_to_wav(audio_bytes, self.use == "local") # 将webm格式的音频转换为wav格式
@@ -105,7 +105,7 @@ class Whisper(Singleton, SpeechToText):
         webm_audio.export(wav_data, format="wav") # 将webm格式的音频转换为wav格式
         if local: 
             return wav_data
-with sr.AudioFile(wav_data) as source:  # 记录音频
+        with sr.AudioFile(wav_data) as source:  # 记录音频
             audio = self.recognizer.record(source)  
         return audio 
 #将bytes转换为wav格式,参数有 audio_bytes转录的语音数据, return:wav格式的音频

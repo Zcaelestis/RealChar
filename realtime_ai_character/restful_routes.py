@@ -23,8 +23,16 @@ from realtime_ai_character.llm.system_prompt_generator import generate_system_pr
 from requests import Session
 from sqlalchemy import func
 
+#greenapi mudule 
+import json
+from realtime_ai_character.greenapi_client import GreenApiClient
+
+
 
 router = APIRouter() # 创建一个APIRouter对象,定义路由和端点
+
+# 实例化GreenApiClient类,并赋值给green_api_client
+green_api_client = GreenApiClient()
 
 # 判断环境变量USE_AUTH是否为真，若为真则从环境变量中获取FIREBASE_CONFIG_PATH的值，并使用该值初始化firebase_admin
 if os.getenv('USE_AUTH', ''):
@@ -575,3 +583,27 @@ async def edit_memory(edit_memory_request: EditMemoryRequest, user = Depends(get
 
     db.merge(memory)
     db.commit()
+
+#添加新的路由端点whatsapp_webhook
+@router.post("/whatsapp_webhook")
+async def whatsapp_webhook(body: dict):
+    # Extract message content and sender info from the request body
+    messages = body.get("messages", [])
+    if not messages:
+        return {"status": "no messages received"}
+    
+    for message in messages:
+        if message.get("fromMe"):
+            continue  # skip messages sent by us
+        
+        text = message.get("body", "").strip()
+        phone_number = message.get("author", "").split("@")[0] if "author" in message else None
+
+        # Check if the phone number matches Elon's number
+        if phone_number == "13145997724":
+            response_text = await get_response_from_elon_musk(text)
+            
+            # Send the response text to the WhatsApp number
+            green_api_client.send_message(phone_number, response_text)
+
+    return {"status": "messages processed"}
